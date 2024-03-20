@@ -16,7 +16,8 @@ if [ -f "$file_path" ]; then
     echo "Modifying complete(env.php)."
     warden env exec php-fpm php bin/magento a:c:i
     warden env exec php-fpm php bin/magento mo:d Magento_TwoFactorAuth Magento_AdminAdobeImsTwoFactorAuth
-    warden env exec -e COMPOSER_AUTH="$AUTH_JSON" php-fpm composer require pointspay/module-pointspay:"*"
+    warden env exec -e COMPOSER_AUTH="$AUTH_JSON" php-fpm composer config repositories.perspective composer https://pointspay.repo.composer.perspective.net.ua -v
+    warden env exec -e COMPOSER_AUTH="$AUTH_JSON" php-fpm composer require pointspay/module-pointspay:"*" -v
     warden env exec php-fpm php bin/magento s:up
     warden env exec php-fpm php bin/magento cache:enable
     warden env exec php-fpm php bin/magento d:m:se developer
