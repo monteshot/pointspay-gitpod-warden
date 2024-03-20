@@ -1,0 +1,138 @@
+image: gitpod/workspace-full
+
+# Commands that will run on workspace start
+tasks:
+  - name: Setup, Install & Build
+    before: |
+      echo "Starting the Before step..."
+      startSeconds=$SECONDS
+      echo 'export PATH="/workspace/opt/warden/bin:$PATH"' >> ~/.bashrc
+      clear_url=$(gp url | awk -F"//" {'print $2'}) && url=$url;
+      echo 'export CLEAR_URL="'$clear_url'"' >> ~/.bashrc
+      PATH="/workspace/opt/warden/bin:$PATH"
+      source ~/.bashrc
+      echo "The Before step is DONE!"
+    init: |
+      echo "Starting the Init step..."
+      sudo apt install sshpass pv tldr rsync -y
+      tldr --update
+      sudo mkdir -p /home/gitpod/.config/composer
+      sudo mkdir -p /home/gitpod/dumps
+      sudo chown -R gitpod:gitpod /home/gitpod/.config/composer
+      sudo chown -R gitpod:gitpod /home/gitpod/dumps
+      clear_url=$(gp url | awk -F"//" {'print $2'}) && url=$url;
+      bash $GITPOD_REPO_ROOTS/.warden/gitpod-manage-pre-setup.sh
+      bash $GITPOD_REPO_ROOTS/.warden/gitpod-manage-warden.sh
+      bash $GITPOD_REPO_ROOTS/.warden/gitpod-manage-traefik.sh
+      bash $GITPOD_REPO_ROOTS/.warden/gitpod-manage-mailhog.sh
+      warden env exec -e COMPOSER_AUTH="$AUTH_JSON" -e MAGENTO_VERSION="$MAGENTO_VERSION" php-fpm composer create-project --repository-url=https://repo.magento.com/ magento/project-community-edition=$MAGENTO_VERSION /var/www/html/tmp/ -vvv
+      sudo rm -rf var/
+      mv $GITPOD_REPO_ROOTS/tmp/* $GITPOD_REPO_ROOTS/
+      rm -rf $GITPOD_REPO_ROOTS/tmp/
+      warden env exec php-fpm composer install -vvv
+      sudo chown -R gitpod:gitpod $GITPOD_REPO_ROOTS
+      bash $GITPOD_REPO_ROOTS/.warden/gitpod-manage-db-install.sh
+      bash $GITPOD_REPO_ROOTS/.warden/gitpod-manage-post-setup.sh
+      echo "The Init step is DONE!"
+    command: |
+      echo Starting the Command step...
+      clear_url=$(gp url | awk -F"//" {'print $2'}) && url=$url;
+      echo 'export CLEAR_URL="'$clear_url'"' >> ~/.bashrc
+      source ~/.bashrc
+      echo "List of Warden files"
+      sudo ls -lah /home/gitpod/.warden/
+      echo "Setting up warden files"
+      bash $GITPOD_REPO_ROOTS/.warden/gitpod-manage-warden-after-restart-workspace.sh
+      bash $GITPOD_REPO_ROOTS/.warden/gitpod-manage-pre-setup.sh
+      bash $GITPOD_REPO_ROOTS/.warden/gitpod-manage-warden.sh
+      bash $GITPOD_REPO_ROOTS/.warden/gitpod-manage-traefik.sh
+      bash $GITPOD_REPO_ROOTS/.warden/gitpod-manage-mailhog.sh
+      bash $GITPOD_REPO_ROOTS/.warden/gitpod-manage-post-setup.sh
+      sudo chmod -R 777 /home/gitpod/.warden/ /workspace/opt/warden/
+      sudo chown -R gitpod:gitpod /home/gitpod/.warden/ /workspace/opt/warden/
+      echo "Starting Warden"
+      warden svc up
+      warden env up
+      echo The Command step is DONE!
+      url=$(gp url | awk -F"//" {'print $2'}) && url="https://443-"$url"/";
+      echo Project Url is $url
+      url=$(gp url | awk -F"//" {'print $2'}) && url="https://4433-"$url"/";
+      echo Traefik Url is $url
+      url=$(gp url | awk -F"//" {'print $2'}) && url="https://8025-"$url"/";
+      echo Mailhog Url is $url
+      url=$(gp url | awk -F"//" {'print $2'}) && url="https://80-"$url"/phpmyadmin/";
+      echo PhpMyAdmin Url is $url
+      echo Use XSTORE cookie to change store
+      echo Project is UP \(elapsed $((SECONDS - startSeconds)) seconds\)
+
+# Ports to expose on workspace startup
+ports:
+  - port: 80
+    onOpen: ignore
+    name: Website
+    description: Website generic
+    visibility: public
+  - port: 443
+    onOpen: ignore
+    name: Website SSL
+    description: Website SSL
+    visibility: public
+  - port: 4433
+    onOpen: ignore
+    name: Traefik Port
+    description: Traefik Port
+    visibility: public
+  - port: 9200
+    onOpen: ignore
+    name: Elastic
+    description: Elastic
+    visibility: public
+  - port: 9300
+    onOpen: ignore
+    name: Elastic Service Port
+    description: Elastic Service Port
+    visibility: public
+  - port: 3306
+    onOpen: ignore
+    name: MariaDB
+    description: MariaDB
+    visibility: public
+  - port: 8025
+    onOpen: ignore
+    name: Mailhog
+    description: Mailhog
+    visibility: public
+  - port: 9001
+    onOpen: ignore
+    name: Debug
+    description: Debug
+    visibility: public
+  - port: 9002
+    onOpen: ignore
+    name: Debug
+    description: Debug
+    visibility: public
+  - port: 9003
+    onOpen: ignore
+    name: Debug
+    description: Debug
+    visibility: public
+  - port: 2222
+    onOpen: ignore
+    name: Panubo SSH
+    description: Panubo SSH
+    visibility: public
+vscode:
+    extensions:
+        - felixfbecker.php-debug
+        - bmewburn.vscode-intelephense-client
+        - ms-azuretools.vscode-docker
+jetbrains:
+  phpstorm:
+    plugins:
+      - zielu.gittoolbox
+      - com.magento.idea.magento2plugin
+      - com.atwix.magento
+      - com.github.copilot
+      - some.awesome
+      - de.espend.idea.php.annotation
